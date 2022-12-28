@@ -1,235 +1,245 @@
 'use strict';
 
-const modal = document.querySelector('.modal');
-const overlay = document.querySelector('.overlay');
-const btnCloseModal = document.querySelector('.btn--close-modal');
-const btnsOpenModal = document.querySelectorAll('.btn--show-modal');
-const btnScrollTo = document.querySelector('.btn--scroll-to');
-const section1 = document.querySelector('#section--1  ');
-const header = document.querySelector('.header');
-const nav = document.querySelector('.nav');
-const tabs = document.querySelectorAll('.operations__tab');
-const tabsContainer = document.querySelector('.operations__tab-container');
-const tabsContent = document.querySelectorAll('.operations__content');
-///////////////////////////////////////
-// Modal window
-const openModal = function (e) {
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+// BANKIST APP
+
+// Data
+const account1 = {
+  owner: 'Jonas Schmedtmann',
+  movements: [200, 450, -400, 3000, -650, -130, 70, 1300],
+  interestRate: 1.2, // %
+  pin: 1111,
+};
+
+const account2 = {
+  owner: 'Jessica Davis',
+  movements: [5000, 3400, -150, -790, -3210, -1000, 8500, -30],
+  interestRate: 1.5,
+  pin: 2222,
+};
+
+const account3 = {
+  owner: 'Steven Thomas Williams',
+  movements: [200, -200, 340, -300, -20, 50, 400, -460],
+  interestRate: 0.7,
+  pin: 3333,
+};
+
+const account4 = {
+  owner: 'Sarah Smith',
+  movements: [430, 1000, 700, 50, 90],
+  interestRate: 1,
+  pin: 4444,
+};
+
+const accounts = [account1, account2, account3, account4];
+
+// Elements
+const labelWelcome = document.querySelector('.welcome');
+const labelDate = document.querySelector('.date');
+const labelBalance = document.querySelector('.balance__value');
+const labelSumIn = document.querySelector('.summary__value--in');
+const labelSumOut = document.querySelector('.summary__value--out');
+const labelSumInterest = document.querySelector('.summary__value--interest');
+const labelTimer = document.querySelector('.timer');
+
+const containerApp = document.querySelector('.app');
+const containerMovements = document.querySelector('.movements');
+
+const btnLogin = document.querySelector('.login__btn');
+const btnTransfer = document.querySelector('.form__btn--transfer');
+const btnLoan = document.querySelector('.form__btn--loan');
+const btnClose = document.querySelector('.form__btn--close');
+const btnSort = document.querySelector('.btn--sort');
+
+const inputLoginUsername = document.querySelector('.login__input--user');
+const inputLoginPin = document.querySelector('.login__input--pin');
+const inputTransferTo = document.querySelector('.form__input--to');
+const inputTransferAmount = document.querySelector('.form__input--amount');
+const inputLoanAmount = document.querySelector('.form__input--loan-amount');
+const inputCloseUsername = document.querySelector('.form__input--user');
+const inputClosePin = document.querySelector('.form__input--pin');
+
+const displayMovements = function (movements, sort = false) {
+  
+  containerMovements.innerHTML = '';
+  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+  movs.forEach(function (mov, i) {
+    const type = mov > 0 ? 'deposit' : 'withdrawal';
+
+    const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--${type}">${
+      i + 1
+    } ${type}</div>
+        <div class="movements__value">${mov} ₹</div>
+      </div>
+    `;
+
+    containerMovements.insertAdjacentHTML('afterbegin', html);
+  });
+};
+
+
+const createUsername = function (accs) {
+  accs.forEach(function (acc) {
+    acc.username = acc.owner
+    .toLowerCase()
+    .split(' ')
+    .map(word => word[0])
+    .join('');
+  })
+
+}
+createUsername(accounts);
+
+const calcDisplayBalance = function(acc) {
+  acc.balance = acc.movements.reduce(getTotal, 0);
+  function getTotal(total, mov){
+    return total + mov;
+  }
+  labelBalance.textContent = `₹ ${acc.balance} `; 
+}
+
+
+const calcDisplaySummary = function (acc) {
+  const incomes = acc.movements
+    .filter(item => item > 0)
+    .reduce((inv, cur) => inv + cur, 0);
+  labelSumIn.textContent = `${incomes} RS`;
+
+  const expense = acc.movements
+    .filter(item => item < 0)
+    .reduce((inv, cur) => inv + cur, 0);
+  labelSumOut.textContent = `${expense} RS`;
+
+  const interestRate = acc.interestRate / 100;
+  const interest = incomes * interestRate;
+  labelSumInterest.textContent = `${interest} RS`;
+};
+
+
+function startTimer(duration, display) {
+  var timer = duration,minutes,seconds;
+  setInterval(function () {
+    minutes = parseInt(timer / 60, 10);
+    seconds = parseInt(timer % 60, 10);
+
+    minutes = minutes < 10 ? '0' + minutes : minutes;
+    seconds = seconds < 10 ? '0' + seconds : seconds;
+
+    display.textContent = minutes + ':' + seconds;
+
+    if (--timer < 0) {
+      location.reload();
+    }
+  }, 1000);
+}
+
+
+const date = new Date();
+const currentDate = `${date.getDate()}/${date.getMonth()}/${date.getFullYear()}`;
+
+const updateUI = function (acc) {
+  labelDate.textContent = currentDate;
+  startTimer(300, labelTimer)
+  // Display Movements
+  displayMovements(acc.movements);
+  // Display Balance
+  calcDisplayBalance(acc);
+  // Display Summary
+  calcDisplaySummary(acc);
+}
+
+let currentAccount;
+// Event Handlers
+btnLogin.addEventListener('click', function (e) {
   e.preventDefault();
-  modal.classList.remove('hidden');
-  overlay.classList.remove('hidden');
-};
+  currentAccount = accounts.find(acc => acc.username === inputLoginUsername.value);
+  console.log(currentAccount);
 
-const closeModal = function () {
-  modal.classList.add('hidden');
-  overlay.classList.add('hidden');
-};
-
-btnsOpenModal.forEach(btn => {
-  btn.addEventListener('click', openModal);
-});
-
-btnCloseModal.addEventListener('click', closeModal);
-overlay.addEventListener('click', closeModal);
-
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-    closeModal();
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    // Display UI and Welcome Message
+    labelWelcome.innerHTML = `Welcome back, ${currentAccount.owner.split(' ')[0]}`;
+    inputLoginPin.value = inputLoginUsername.value = '';
+    inputLoginPin.blur();
+    containerApp.style.opacity = 100;
+    
+    updateUI(currentAccount);
   }
 });
-//////////////////////////////////////////////////////
 
-// Button Scrolling
-btnScrollTo.addEventListener('click', function () {
-  section1.scrollIntoView({ behavior: 'smooth' });
-});
-
-//////////////////////////////////////////////////////
-// Page Navigation
-// document.querySelectorAll('.nav__link').forEach(function (curEl) {
-//   curEl.addEventListener('click', function (e) {
-//     e.preventDefault();
-//     const id = this.getAttribute('href');
-//     // console.log(id);
-//     const el = document.querySelector(id);
-//     el.scrollIntoView({ behavior: 'smooth' });
-//   });
-// });
-
-// 1. Add Event listener to common Parent element
-// 2. Determine what element originated the event
-
-document.querySelector('.nav__links').addEventListener('click', function (e) {
+// Transfers
+btnTransfer.addEventListener('click', function (e) {
   e.preventDefault();
+  const amount = Number(inputTransferAmount.value);
+  const receiverAcc = accounts.find(
+    acc => acc.username === inputTransferTo.value
+  );
+  
+  if (
+    amount > 0 &&
+    receiverAcc &&
+    currentAccount.balance >= amount &&
+    receiverAcc?.username !== currentAccount.username
+  ) {
+    // Add a negative movement to the current Account
+    currentAccount.movements.push(-amount);
+    // Add a positive movement to the receiver Account
+    receiverAcc.movements.push(amount);
+    // Update the user Interface
+    updateUI(currentAccount);
 
-  if (e.target.classList.contains('nav__link')) {
-    const id = e.target.getAttribute('href');
-    console.log(id);
-    const el = document.querySelector(id);
-    el.scrollIntoView({ behavior: 'smooth' });
+    inputTransferAmount.value = inputTransferTo.value = '';
+    inputTransferAmount.blur();
+
   }
+
 });
-
-//////////////////////////////////////////////////////
-
-// Tabbed components
-
-tabsContainer.addEventListener('click', function (e) {
-  const clicked = e.target.closest('.operations__tab');
-  if (!clicked) return;
-  // console.log(clicked);
-
-  // REmove Active Classes
-  tabs.forEach(el => {
-    el.classList.remove('operations__tab--active');
-  });
-  tabsContent.forEach(el => {
-    el.classList.remove('operations__content--active');
-  });
-
-  // Activate content Area
-  clicked.classList.add('operations__tab--active');
-
-  document
-    .querySelector(`.operations__content--${clicked.dataset.tab}`)
-    .classList.add('operations__content--active');
-});
-
-// Menu fade animation
-const handleHover = function (e) {
-  if (e.target.classList.contains('nav__link')) {
-    const link = e.target;
-    const siblings = link.closest('.nav').querySelectorAll('.nav__link');
-    const logo = link.closest('.nav').querySelector('img');
-
-    siblings.forEach(el => {
-      if (el !== link) el.style.opacity = this;
-    });
-    logo.style.opacity = this;
+// Close Account
+btnClose.addEventListener('click', function(e) {
+  e.preventDefault();
+  if (
+    inputCloseUsername.value === currentAccount.username &&
+    Number(inputClosePin.value) === currentAccount.pin
+  ) {
+    const index = accounts.findIndex(acc => acc.username === currentAccount.username);
+    accounts.splice(index, 1);
+    containerApp.style.opacity = 0;
+    console.log(accounts);
   }
-};
+})
 
-// Passing "argument" into handler
-nav.addEventListener('mouseover', handleHover.bind(0.5));
-nav.addEventListener('mouseout', handleHover.bind(1));
-//////////////////////////////////////////////////////
+// Request Loan
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+  const amount = Number(inputLoanAmount.value);
+  if (amount > 0 && currentAccount.movements.some(mov => mov >= amount *0.1)) {
+    currentAccount.movements.push(amount);
+    updateUI(currentAccount);
+  }
+})
 
-// Sticky Navigation
-
-// const section1Coords = section1.getBoundingClientRect();
-
-// window.addEventListener('scroll', function (e) {
-//   this.window.scrollY > section1Coords.top
-//     ? nav.classList.add('sticky')
-//     : nav.classList.remove('sticky');
-// });
-
-// Sticky Navigation : intersection observer
-const navHeight = nav.getBoundingClientRect().height;
-const stickyNav = function (entries) {
-  const [entry] = entries;
-
-  if (entry.isIntersecting) nav.classList.remove('sticky');
-  else nav.classList.add('sticky');
-};
-const headerObserver = new IntersectionObserver(stickyNav, {
-  root: null,
-  threshold: 0,
-  rootMargin: `-${navHeight}px`,
+let isSorted = false;
+// Sorting the Movements
+btnSort.addEventListener('click', function (e) {
+  e.preventDefault();
+  displayMovements(currentAccount.movements, !isSorted);
+  isSorted = !isSorted;
 });
 
-headerObserver.observe(header);
-//////////////////////////////////////////////////////
-// Reveal Sections
-// Our Job is to remove section--hidden class so that they could be visible only on scrolling
 
-const allSections = document.querySelectorAll('.section');
-// 2/
-const revealSection = function (entries, observer) {
-  const [entry] = entries;
-  if (!entry.isIntersecting) return;
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+// LECTURES
 
-  entry.target.classList.remove('section--hidden');
-  observer.unobserve(entry.target); //entry.target id the current section
-};
-// 1.
-const sectionObserver = new IntersectionObserver(revealSection, {
-  root: null,
-  threshold: 0.15,
-});
-// 3.
-allSections.forEach(function (currSection) {
-  currSection.classList.add('section--hidden');
-  sectionObserver.observe(currSection);
-});
+// const currencies = new Map([
+//   ['USD', 'United States dollar'],
+//   ['EUR', 'Euro'],
+//   ['GBP', 'Pound sterling'],
+// ]);
 
-//////////////////////////////////////////////////////
-// Lazy Image Loader
-const imgTarget = document.querySelectorAll('img[data-src]');
+// const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
 
-const loadImg = (entries, observer) => {
-  const [entry] = entries;
-  console.log(entry);
-
-  if (!entry.isIntersecting) return;
-
-  // Replace src with data-src
-  entry.target.src = entry.target.getAttribute('data-src');
-
-  entry.target.addEventListener('load', () => {
-    entry.target.classList.remove('lazy-img');
-  });
-
-  observer.unobserve(entry.target);
-};
-
-const imageObserver = new IntersectionObserver(loadImg, {
-  root: null,
-  threshold: 1,
-});
-
-imgTarget.forEach(img => imageObserver.observe(img));
-//////////////////////////////////////////////////////
-
-document.addEventListener('DOMContentLoaded', function (e) {
-  console.log('HTML parsed and DOM tree built');
-});
-
-window.addEventListener('load', function (e) {
-  console.log('Page Fully Loaded', e);
-});
-
-window.addEventListener('beforeunload', function (e) {
-  e.preventDefault;
-  console.log(e);
-  e.returnValue = '';
-});
-
-//////////////////////////////////////////////////////
-
-// Selection of elements
-// console.log(document.documentElement);
-// console.log(document.head);
-// console.log(document.body);\
-// console.log(allSections);
-
-// const allbuttons = document.getElementsByTagName('button');
-// console.log(allbuttons);
-
-// const allBtns = document.getElementsByClassName('btn');
-// console.log(allBtns);
-
-// creating and inserting elements
-const message = document.createElement('div');
-message.innerHTML = `WE use Cookie for improved functionality and analytics. <button class="btn btn--close-cookie">GOT IT!</button>`;
-header.append(message);
-// header.prepend(message);
-// header.append(message.cloneNode(true));
-// header.before(message)
-// header.after(message).
-
-// Deleting elements
-document
-  .querySelector('.btn--close-cookie')
-  .addEventListener('click', function () {
-    message.remove();
-  });
+/////////////////////////////////////////////////
